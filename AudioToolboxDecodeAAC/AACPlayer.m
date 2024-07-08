@@ -8,7 +8,7 @@
 #import "AACPlayer.h"
 #import <AudioToolbox/AudioToolbox.h>
 
-const uint32_t CONST_BUFFER_COUNT = 3;
+const uint32_t CONST_BUFFER_COUNT = 1;
 const uint32_t CONST_BUFFER_SIZE = 0x10000;
 
 @implementation AACPlayer
@@ -100,7 +100,7 @@ const uint32_t CONST_BUFFER_SIZE = 0x10000;
             // buffer full
             break;
         }
-        NSLog(@"buffer%d full", i);
+        NSLog(@"buffer %d full", i);
     }
 }
 
@@ -116,12 +116,15 @@ void bufferReady(void *inUserData, AudioQueueRef inAQ, AudioQueueBufferRef buffe
     if ([player fillBuffer:buffer])
     {
         NSLog(@"play end");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [player stop];
+        });
     }
 }
 
 - (bool)fillBuffer:(AudioQueueBufferRef)buffer
 {
-    bool full = NO;
+    bool isEnd = NO;
     uint32_t bytes = 0, packets = (uint32_t)packetNums;
     // Read packets of audio data from an audio file
     OSStatus status = noErr;
@@ -136,11 +139,10 @@ void bufferReady(void *inUserData, AudioQueueRef inAQ, AudioQueueBufferRef buffe
     }
     else
     {
-        AudioQueueStop(audioQueue, NO);
-        full = YES;
+        isEnd = YES;
     }
     
-    return full;
+    return isEnd;
 }
 
 - (void)play
@@ -149,6 +151,16 @@ void bufferReady(void *inUserData, AudioQueueRef inAQ, AudioQueueBufferRef buffe
     AudioQueueSetParameter(audioQueue, kAudioQueueParam_Volume, 1.0);
     // Begin playing or recording audio
     AudioQueueStart(audioQueue, NULL);
+}
+
+- (void)stop
+{
+    AudioQueueStop(audioQueue, NO);
+    if (self.delegate && [self.delegate respondsToSelector:@selector(onPlayToEnd:)])
+    {
+        __strong typeof(AACPlayer) *player = self;
+        [self.delegate onPlayToEnd:player];
+    }
 }
 
 - (double)getCurrentTime
@@ -162,7 +174,7 @@ void bufferReady(void *inUserData, AudioQueueRef inAQ, AudioQueueBufferRef buffe
         if(status == noErr)
         {
             AudioQueueGetCurrentTime(audioQueue, timeLine, &timeStamp, NULL); // Get the current audio queue time
-            timeInterval = timeStamp.mSampleTime * 1000000 / audioStreamBasicDescrpition.mSampleRate; // The number of sample frames per second of the data in the stream
+            timeInterval = timeStamp.mSampleTime / audioStreamBasicDescrpition.mSampleRate; // The number of sample frames per second of the data in the stream
         }
     }
     return timeInterval;

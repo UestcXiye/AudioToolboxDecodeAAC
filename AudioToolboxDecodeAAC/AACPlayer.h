@@ -22,6 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, weak) id<AACPlayerDelegate> delegate;
 
 - (void)play;
+- (void)stop;
 - (double)getCurrentTime;
 
 @end

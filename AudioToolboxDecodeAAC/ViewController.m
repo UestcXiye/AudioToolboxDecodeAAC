@@ -8,6 +8,10 @@
 #import "ViewController.h"
 #import "AACPlayer.h"
 
+@interface ViewController () <AACPlayerDelegate>
+
+@end
+
 @implementation ViewController
 {
     AACPlayer *player;
@@ -36,9 +40,8 @@
     [self.mButton addTarget:self action:@selector(btnClick:) forControlEvents:UIControlEventTouchUpInside];
     
     self.mDispalyLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(updateFrame)];
-    self.mDispalyLink.preferredFramesPerSecond = 30;
+    self.mDispalyLink.preferredFramesPerSecond = 12;
     [self.mDispalyLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
-    [self.mDispalyLink setPaused:YES];
     
     [self.view addSubview:self.mLabel];
     [self.view addSubview:self.mCurrentTimeLabel];
@@ -60,6 +63,8 @@
 {
     self.mButton.hidden = YES;
     player = [[AACPlayer alloc] init];
+    // AACPlayer Delegate
+    player.delegate = self;
     [player play];
 }
 
@@ -67,8 +72,18 @@
 {
     if (player)
     {
-        self.mCurrentTimeLabel.text = [NSString stringWithFormat:@"当前时间:%.1fs", [player getCurrentTime]];
+        self.mCurrentTimeLabel.text = [NSString stringWithFormat:@"当前播放时长：%.1fs", [player getCurrentTime]];
     }
+}
+
+#pragma mark - AACPlayer Delegate Method
+
+- (void)onPlayToEnd:(AACPlayer *)player
+{
+    [self mButton];
+    player = nil;
+    self.mButton.hidden = NO;
+    [self.mDispalyLink setPaused:YES];
 }
 
 @end
